@@ -1,34 +1,34 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
 import os
 
-st.set_page_config(page_title="CV PRO MAROC", page_icon="🇲🇦", layout="centered")
+st.set_page_config(page_title="CV PRO MAROC")
 
-api_key = st.secrets.get("API_KEY", os.getenv("API_KEY", ""))
+# المفتاح الجديد
+api_key = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("API_KEY") or os.getenv("API_KEY")
 
-if api_key:
-    genai.configure(api_key=api_key)
+if not api_key:
+    st.error("المفتاح ما كاينش ف Secrets")
+    st.stop()
+
+client = genai.Client(api_key=api_key)
 
 st.title("CV PRO MAROC 🇲🇦")
 st.subheader("المعلم رشيد - خبير ANAPEC")
 st.markdown("---")
-cv_text = st.text_area("حط النص ديال السيفي هنا", height=250, placeholder="كتب السيفي ديالك هنا...")
 
-if st.button("🔥 حلل ليا السيفي", use_container_width=True, type="primary"):
-    if not cv_text.strip():
-        st.error("عافاك دخل السيفي بعدا")
-    elif not api_key:
-        st.error("API_KEY ما كاينش")
-    else:
-        try:
-            with st.spinner("⏳ كنحلل..."):
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                prompt = f"أنت خبير ANAPEC مغربي. حلل هذا السيفي: {cv_text}"
-                response = model.generate_content(prompt)
-                st.success("✅ كمل!")
-                st.markdown(response.text)
-        except Exception as e:
-            st.error(f"مشكل: {e}")
+uploaded_file = st.file_uploader("حط السيفي ديالك", type=["pdf","txt","docx"])
 
-st.markdown("---")
-st.caption("صنع بـ ❤️ في الجديدة")
+if uploaded_file:
+    text = uploaded_file.read().decode('utf-8', errors='ignore')[:8000]
+    if st.button("صاوب ليا الموقع"):
+        with st.spinner("كنصاوب..."):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=f"حلل هاد CV وصاوب موقع: {text}"
+                )
+                st.success("تم!")
+                st.write(response.text)
+            except Exception as e:
+                st.error(f"خطأ: {e}")
